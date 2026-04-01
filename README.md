@@ -32,6 +32,16 @@ Or if installed as a project dependency:
 npx semiclaw-code
 ```
 
+## Login Options
+
+Semiclaw Code now includes a `Custom Endpoint` option in the login flow, alongside Claude subscription and Anthropic Console login. This lets you configure:
+
+- API Endpoint
+- API Key
+- Model
+
+![Login options with custom endpoint support](./assets/login-options.png)
+
 ## Development
 
 To run from source:

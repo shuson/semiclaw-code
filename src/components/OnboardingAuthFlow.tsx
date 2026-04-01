@@ -11,6 +11,7 @@ import TextInput from './TextInput.js'
 
 type Props = {
   onDone(): void
+  startingMessage?: string
 }
 
 type Screen = 'select' | 'claudeai' | 'console' | 'platform' | 'endpoint'
@@ -30,7 +31,10 @@ const CONFLICTING_PROVIDER_ENV_KEYS = [
   'ANTHROPIC_AUTH_TOKEN',
 ] as const
 
-export function OnboardingAuthFlow({ onDone }: Props): React.ReactNode {
+export function OnboardingAuthFlow({
+  onDone,
+  startingMessage,
+}: Props): React.ReactNode {
   const [screen, setScreen] = useState<Screen>('select')
 
   if (screen === 'claudeai') {
@@ -38,7 +42,9 @@ export function OnboardingAuthFlow({ onDone }: Props): React.ReactNode {
       <ConsoleOAuthFlow
         onDone={onDone}
         forceLoginMethod="claudeai"
-        startingMessage="Choose how you want to connect Semiclaw Code."
+        startingMessage={
+          startingMessage ?? 'Choose how you want to connect Semiclaw Code.'
+        }
       />
     )
   }
@@ -48,7 +54,9 @@ export function OnboardingAuthFlow({ onDone }: Props): React.ReactNode {
       <ConsoleOAuthFlow
         onDone={onDone}
         forceLoginMethod="console"
-        startingMessage="Choose how you want to connect Semiclaw Code."
+        startingMessage={
+          startingMessage ?? 'Choose how you want to connect Semiclaw Code.'
+        }
       />
     )
   }
@@ -73,7 +81,9 @@ export function OnboardingAuthFlow({ onDone }: Props): React.ReactNode {
 
   return (
     <Box flexDirection="column" gap={1} paddingLeft={1}>
-      <Text bold>Choose how you want to connect Semiclaw Code</Text>
+      <Text bold>
+        {startingMessage ?? 'Choose how you want to connect Semiclaw Code'}
+      </Text>
       <Text dimColor>
         You can use a Claude subscription, Anthropic Console billing, or a
         third-party endpoint with your own API key.
@@ -102,7 +112,7 @@ export function OnboardingAuthFlow({ onDone }: Props): React.ReactNode {
             {
               label: (
                 <Text>
-                  3rd-party endpoint ·{' '}
+                  Custom endpoint ·{' '}
                   <Text dimColor>OpenAI-compatible proxy or custom gateway</Text>
                 </Text>
               ),

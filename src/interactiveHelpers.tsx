@@ -17,6 +17,11 @@ import { isQualifiedForGrove } from './services/api/grove.js';
 import { handleMcpjsonServerApprovals } from './services/mcpServerApproval.js';
 import { AppStateProvider } from './state/AppState.js';
 import { onChangeAppState } from './state/onChangeAppState.js';
+import {
+  getAnthropicApiKeyWithSource,
+  getAuthTokenSource,
+  isAnthropicAuthEnabled,
+} from './utils/auth.js';
 import { normalizeApiKeyForConfig } from './utils/authPortable.js';
 import { getExternalClaudeMdIncludes, getMemoryFiles, shouldShowClaudeMdExternalIncludesWarning } from './utils/claudemd.js';
 import { checkHasTrustDialogAccepted, getCustomApiKeyStatus, getGlobalConfig, saveGlobalConfig } from './utils/config.js';
@@ -101,6 +106,23 @@ export async function renderAndRun(root: Root, element: React.ReactNode): Promis
   await root.waitUntilExit();
   await gracefulShutdown(0);
 }
+
+function shouldRequireStartupLogin(): boolean {
+  if (!isAnthropicAuthEnabled()) {
+    return false;
+  }
+
+  const { hasToken } = getAuthTokenSource();
+  if (hasToken) {
+    return false;
+  }
+
+  const { source: apiKeySource } = getAnthropicApiKeyWithSource({
+    skipRetrievingKeyFromApiKeyHelper: true,
+  });
+
+  return apiKeySource === 'none';
+}
 export async function showSetupScreens(root: Root, permissionMode: PermissionMode, allowDangerouslySkipPermissions: boolean, commands?: Command[], claudeInChrome?: boolean, devChannels?: ChannelEntry[]): Promise<boolean> {
   if ("production" === 'test' || isEnvTruthy(false) || process.env.IS_DEMO // Skip onboarding in demo mode
   ) {
@@ -108,9 +130,11 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
   }
   const config = getGlobalConfig();
   let onboardingShown = false;
+  let authConfiguredDuringSetup = false;
   if (!config.theme || !config.hasCompletedOnboarding // always show onboarding at least once
   ) {
     onboardingShown = true;
+    authConfiguredDuringSetup = true;
     const {
       Onboarding
     } = await import('./components/Onboarding.js');
@@ -215,6 +239,19 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
       });
     }
   }
+  if (!authConfiguredDuringSetup && shouldRequireStartupLogin()) {
+    const {
+      Login
+    } = await import('./commands/login/login.js');
+    const loginCompleted = await showSetupDialog<boolean>(root, done => <Login startingMessage="Sign in to continue using Semiclaw Code." onDone={success => done(success)} />, {
+      onChangeAppState
+    });
+    if (!loginCompleted) {
+      gracefulShutdownSync(0);
+      return false;
+    }
+    authConfiguredDuringSetup = true;
+  }
   if ((permissionMode === 'bypassPermissions' || allowDangerouslySkipPermissions) && !hasSkipDangerousModePermissionPrompt()) {
     const {
       BypassPermissionsModeDialog
@@ -294,7 +331,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
     } = await import('./components/ClaudeInChromeOnboarding.js');
     await showSetupDialog(root, done => <ClaudeInChromeOnboarding onDone={done} />);
   }
-  return onboardingShown;
+  return authConfiguredDuringSetup;
 }
 export function getRenderContext(exitOnCtrlC: boolean): {
   renderOptions: RenderOptions;

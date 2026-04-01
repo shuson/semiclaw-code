@@ -2244,7 +2244,7 @@ async function run(): Promise<CommanderCommand> {
       });
       logForDebugging('[STARTUP] Running showSetupScreens()...');
       const setupScreensStart = Date.now();
-      const onboardingShown = await showSetupScreens(root, permissionMode, allowDangerouslySkipPermissions, commands, enableClaudeInChrome, devChannels);
+      const authConfiguredDuringSetup = await showSetupScreens(root, permissionMode, allowDangerouslySkipPermissions, commands, enableClaudeInChrome, devChannels);
       logForDebugging(`[STARTUP] showSetupScreens() completed in ${Date.now() - setupScreensStart}ms`);
       ({
         initialMainLoopModel,
@@ -2282,12 +2282,12 @@ async function run(): Promise<CommanderCommand> {
         agentDef.pendingSnapshotUpdate = undefined;
       }
 
-      // Skip executing /login if we just completed onboarding for it
-      if (onboardingShown && prompt?.trim().toLowerCase() === '/login') {
+      // Skip executing /login if startup already routed the user through auth.
+      if (authConfiguredDuringSetup && prompt?.trim().toLowerCase() === '/login') {
         prompt = '';
       }
-      if (onboardingShown) {
-        // Refresh auth-dependent services now that the user has logged in during onboarding.
+      if (authConfiguredDuringSetup) {
+        // Refresh auth-dependent services now that setup has changed auth state.
         // Keep in sync with the post-login logic in src/commands/login.tsx
         void refreshRemoteManagedSettings();
         void refreshPolicyLimits();
